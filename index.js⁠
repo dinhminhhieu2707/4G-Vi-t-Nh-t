@@ -1,0 +1,71 @@
+require('dotenv').config();
+const { Telegraf, Markup } = require('telegraf');
+
+const bot = new Telegraf(process.env.BOT_TOKEN);
+
+bot.start((ctx) => {
+  const name = ctx.from.first_name || 'bạn';
+  ctx.reply(
+    `Xin chào ${name}! Chào mừng bạn đến với Cửa hàng eSIM Du Lịch Quốc Tế 🌐\n\nVui lòng chọn quốc gia bạn muốn mua data:`,
+    Markup.inlineKeyboard([
+      [Markup.button.callback('🇯🇵 Nhật Bản (5 Ngày - 1GB/ngày)', 'buy_jp')],
+      [Markup.button.callback('🇰🇷 Hàn Quốc (5 Ngày - 1GB/ngày)', 'buy_kr')],
+      [Markup.button.callback('🇹🇭 Thái Lan (5 Ngày - Unlimit)', 'buy_th')],
+      [Markup.button.callback('📞 Hỗ trợ kỹ thuật', 'support')]
+    ])
+  );
+});
+
+bot.action('buy_jp', (ctx) => {
+  const orderId = 'ESIMJP' + Math.floor(1000 + Math.random() * 9000);
+  const amount = 150000;
+  const bankId = process.env.BANK_ID || 'MB';
+  const accountNo = process.env.ACCOUNT_NO || '123456789';
+  const accountName = process.env.ACCOUNT_NAME || 'NGUYEN VAN A';
+
+  const qrUrl = `https://img.vietqr.io/image/${bankId}-${accountNo}-compact2.png?amount=${amount}&addInfo=${orderId}&accountName=${encodeURIComponent(accountName)}`;
+
+  ctx.replyWithPhoto(
+    { url: qrUrl },
+    {
+      caption: `🛒 *ĐƠN HÀNG eSIM NHẬT BẢN*\n` +
+               `-------------------------\n` +
+               `🔹 Mã đơn: \`${orderId}\`\n` +
+               `🔹 Dung lượng: 1GB/ngày\n` +
+               `🔹 Thời hạn: 5 Ngày\n` +
+               `💰 Số tiền: \`${amount.toLocaleString()} VNĐ\`\n\n` +
+               `📌 *Nội dung chuyển khoản:* \`${orderId}\``,
+      parse_mode: 'Markdown',
+      ...Markup.inlineKeyboard([
+        [Markup.button.callback('✅ Tôi đã chuyển khoản', `verify_${orderId}`)],
+        [Markup.button.callback('⬅️ Chọn gói khác', 'back_menu')]
+      ])
+    }
+  );
+});
+
+bot.action('back_menu', (ctx) => {
+  ctx.editMessageText(
+    'Vui lòng chọn quốc gia bạn muốn mua data:',
+    Markup.inlineKeyboard([
+      [Markup.button.callback('🇯🇵 Nhật Bản (5 Ngày - 1GB/ngày)', 'buy_jp')],
+      [Markup.button.callback('🇰🇷 Hàn Quốc (5 Ngày - 1GB/ngày)', 'buy_kr')]
+    ])
+  );
+});
+
+bot.action(/^verify_(.+)$/, async (ctx) => {
+  const orderId = ctx.match[1];
+  await ctx.reply(`🔍 Đang kiểm tra giao dịch cho đơn hàng ${orderId}...`);
+  setTimeout(async () => {
+    await ctx.reply(
+      `🎉 *THANH TOÁN THÀNH CÔNG!*\n\n` +
+      `🔹 *Mã đơn:* \`${orderId}\`\n` +
+      `🔹 *Activation Code:* \`JP-8892-34981-TEST\``,
+      { parse_mode: 'Markdown' }
+    );
+  }, 2000);
+});
+
+bot.launch();
+console.log('🤖 Bot eSIM đang hoạt động...');
